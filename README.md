@@ -1,6 +1,12 @@
 # ClipShare
 ---
+
+English | [简体中文](README_zh_CN.md)
+
 ![image clipshare](./docs/clipshare.png)
+
+## Inspired by [changkun's midgard project](https://github.com/changkun/midgard)
+
 ## Features
 
 1. data backup
