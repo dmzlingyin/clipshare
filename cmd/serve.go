@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"clipshare/pkg/log"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -11,6 +12,7 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "serve command uses in server that transmit received message to other devices",
 	Run: func(cmd *cobra.Command, args []string) {
+		log.InfoLogger.Println("server start")
 		fmt.Println("serve start...")
 	},
 }
