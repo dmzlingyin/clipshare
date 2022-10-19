@@ -24,7 +24,6 @@ import (
 
 func InitRouter() *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	// 允许跨域请求
 	r.Use(cors.Default())
