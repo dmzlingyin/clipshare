@@ -1,9 +1,11 @@
 package cmd
 
 import (
-	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/dmzlingyin/clipshare/pkg/log"
+	"github.com/dmzlingyin/clipshare/routers"
 	"github.com/spf13/cobra"
 )
 
@@ -12,8 +14,7 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "serve command uses in server that transmit received message to other devices",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.InfoLogger.Println("server start")
-		fmt.Println("serve start...")
+		serve()
 	},
 }
 
@@ -29,4 +30,18 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func serve() {
+	router := routers.InitRouter()
+	s := &http.Server{
+		Addr:           ":8080",
+		Handler:        router,
+		ReadTimeout:    time.Minute,
+		WriteTimeout:   time.Minute,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	log.InfoLogger.Println("server start")
+	s.ListenAndServe()
 }
