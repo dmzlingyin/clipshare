@@ -1,4 +1,4 @@
-module clipshare
+module github.com/dmzlingyin/clipshare
 
 go 1.18
 

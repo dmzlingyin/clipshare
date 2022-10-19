@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"clipshare/pkg/log"
 	"fmt"
 
+	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/spf13/cobra"
 )
 

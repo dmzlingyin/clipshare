@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "clipshare/cmd"
+import "github.com/dmzlingyin/clipshare/cmd"
 
 func main() {
 	cmd.Execute()
