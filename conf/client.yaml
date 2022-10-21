@@ -1,7 +1,9 @@
-user:
-  isRegister: false
-  username: lingyin
-  password: test
+# 改用户是否注册
+isRegister: false
 
-device:
-  devicename: arch-linux
+# 用户名和密码
+username: lingyin
+password: test
+
+# 设备名称(必须唯一)
+device: arch-linux

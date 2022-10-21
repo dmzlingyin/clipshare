@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	C "github.com/dmzlingyin/clipshare/pkg/constant"
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
@@ -26,7 +27,7 @@ var clientCmd = &cobra.Command{
 	Short: "client can detect clipboard change and send the content to server",
 	Run: func(cmd *cobra.Command, args []string) {
 		// 将命令行传递的第一个参数作为用户名, 第二个参数作为device
-		client(args[0], args[1])
+		client(C.ClientConf.UserName, C.ClientConf.Device)
 	},
 }
 
@@ -36,15 +37,6 @@ func init() {
 	if err != nil {
 		log.ErrorLogger.Fatalf("clipboard init failed")
 	}
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// clientCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// clientCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func client(username, device string) {
@@ -58,6 +50,7 @@ func client(username, device string) {
 	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
 	if err != nil {
 		log.ErrorLogger.Println(err)
+		return
 	}
 	defer c.Close()
 
