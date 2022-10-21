@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -15,7 +16,8 @@ var clientCmd = &cobra.Command{
 	Use:   "client",
 	Short: "client can detect clipboard change and send the content to server",
 	Run: func(cmd *cobra.Command, args []string) {
-		client()
+		// 将命令行传递的第一个参数作为用户名
+		client(args[0])
 	},
 }
 
@@ -33,11 +35,13 @@ func init() {
 	// clientCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func client() {
-	fmt.Println("connecting to server...")
+func client(username string) {
+	fmt.Println("user: ", username, "connecting to server...")
+	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/socket"}
 
-	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/websocket"}
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	header := http.Header{}
+	header.Add("UserName", username)
+	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
 	if err != nil {
 		log.ErrorLogger.Println(err)
 	}
