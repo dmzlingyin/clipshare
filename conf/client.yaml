@@ -1,0 +1,7 @@
+user:
+  isRegister: false
+  username: lingyin
+  password: test
+
+device:
+  devicename: arch-linux

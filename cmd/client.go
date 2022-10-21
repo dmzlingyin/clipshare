@@ -49,7 +49,7 @@ func init() {
 
 func client(username, device string) {
 	fmt.Println("user: ", username, "connecting to server...")
-	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/socket"}
+	u := url.URL{Scheme: "ws", Host: "172.17.130.166:8080", Path: "/socket"}
 
 	// 建立websocket连接, 通过header区分客户端
 	header := http.Header{}
@@ -61,6 +61,7 @@ func client(username, device string) {
 	}
 	defer c.Close()
 
+	// 监控剪贴板
 	go Watch(username, device)
 
 	for {
@@ -82,7 +83,7 @@ func send(username, device string, data []byte) {
 		Data:     data,
 	}
 	marshalForm, _ := json.Marshal(form)
-	uri := "http://localhost:8080/transfer"
+	uri := "http://172.17.130.166:8080/transfer"
 
 	_, err := http.Post(uri, "application/json", bytes.NewReader(marshalForm))
 	if err != nil {
@@ -93,7 +94,8 @@ func send(username, device string, data []byte) {
 func Watch(username, device string) {
 	ch := clipboard.Watch(context.TODO(), clipboard.FmtText)
 	for data := range ch {
-		fmt.Println(string(data))
-		send(username, device, data)
+		if len(data) != 0 {
+			send(username, device, data)
+		}
 	}
 }
