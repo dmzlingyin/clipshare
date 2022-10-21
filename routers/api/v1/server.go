@@ -30,6 +30,12 @@ type conn struct {
 	ws     *websocket.Conn
 }
 
+type Meta struct {
+	UserName string
+	Device   string
+	Data     []byte
+}
+
 var (
 	// 维护每个用户的连接队列
 	conns    = map[string][]conn{}
@@ -40,8 +46,11 @@ var (
 	}
 )
 
+// Socket 与客户端建立连接
 func Socket(c *gin.Context) {
-	fmt.Println(c.Request.Header["Username"])
+	username := c.Request.Header["Username"][0]
+	device := c.Request.Header["Device"][0]
+
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.ErrorLogger.Println(err)
@@ -49,30 +58,39 @@ func Socket(c *gin.Context) {
 	defer ws.Close()
 
 	// 将ws加入对应用户的连接队列
-	conns["username"] = append(conns["username"], conn{device: "test", ws: ws})
+	conns[username] = append(conns[username], conn{device: device, ws: ws})
 
 	// 心跳检测(1s)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		fmt.Println("1s done")
-		err := ws.WriteMessage(websocket.TextMessage, []byte{'\x00'})
+		err := ws.WriteMessage(websocket.TextMessage, []byte{})
 		if err != nil {
 			log.ErrorLogger.Println("device offline")
+			fmt.Println("client offline")
 			return
 		}
 	}
 }
 
-// func Transfer(c *gin.Context) {
-// 	// 读取用户、device_id、数据信息
-// 	username := "test"
-// 	device := "test"
-// 	data := "test"
+// Transfer接口获取传入数据, 并进行广播
+func Transfer(c *gin.Context) {
+	// 读取发送用户、device、数据信息
+	userInfo := Meta{}
+	c.Bind(&userInfo)
 
-// 	for conn := range conns["username"] {
-// 		if conn.device != device {
-// 			conn.ws.WriteMessage()
-// 		}
-// 	}
-// }
+	// 向发送方其他在线设备进行广播
+	for i, conn := range conns[userInfo.UserName] {
+		if conn.device != userInfo.Device {
+			err := conn.ws.WriteMessage(websocket.TextMessage, userInfo.Data)
+			if err != nil && websocket.IsCloseError(err) {
+				log.ErrorLogger.Println(userInfo.UserName, conn.device, " offline.")
+
+				// 如果设备下线, 关闭其连接并从连接队列中移除
+				conn.ws.Close()
+				conns[userInfo.UserName] = append(conns[userInfo.UserName][:i], conns[userInfo.UserName][i+1:]...)
+				continue
+			}
+		}
+	}
+}

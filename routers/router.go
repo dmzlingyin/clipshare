@@ -30,5 +30,6 @@ func InitRouter() *gin.Engine {
 	r.Use(middle.Auth())
 
 	r.GET("/socket", v1.Socket)
+	r.POST("/transfer", v1.Transfer)
 	return r
 }
