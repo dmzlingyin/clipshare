@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -36,8 +37,11 @@ func init() {
 func client() {
 	fmt.Println("connecting to server...")
 
-	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/websocket"}
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/socket"}
+	header := http.Header{}
+	header.Add("UserName", "test")
+
+	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
 	if err != nil {
 		log.ErrorLogger.Println(err)
 	}

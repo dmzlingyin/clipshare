@@ -29,6 +29,6 @@ func InitRouter() *gin.Engine {
 	r.Use(cors.Default())
 	r.Use(middle.Auth())
 
-	r.GET("/websocket", v1.Hello)
+	r.GET("/socket", v1.Socket)
 	return r
 }
