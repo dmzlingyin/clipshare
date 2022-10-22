@@ -7,3 +7,6 @@ password: test
 
 # 设备名称(必须唯一)
 device: arch-linux
+
+# 服务器地址
+host: localhost:8080

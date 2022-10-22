@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	C "github.com/dmzlingyin/clipshare/pkg/constant"
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -50,6 +51,23 @@ var (
 func Socket(c *gin.Context) {
 	username := c.Request.Header["Username"][0]
 	device := c.Request.Header["Device"][0]
+
+	// 超过服务器的最大允许用户数量
+	if len(conns) > C.ServerConf.MaxUsers {
+		log.WarningLogger.Printf("user %s's connecting was refused\n", username)
+		c.JSON(http.StatusForbidden, gin.H{
+			"msg": "too many users connected",
+		})
+		return
+	}
+	// 超过服务器的最大允许用户设备数量
+	if len(conns[username]) > C.ServerConf.MaxDevices {
+		log.WarningLogger.Printf("user %s's device %s connecting was refused\n", username, device)
+		c.JSON(http.StatusForbidden, gin.H{
+			"msg": "too many devices connected",
+		})
+		return
+	}
 
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

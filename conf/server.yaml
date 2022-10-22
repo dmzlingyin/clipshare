@@ -1,2 +1,2 @@
-connects:
-  max: 10
+maxUsers: 100
+maxDevices: 10

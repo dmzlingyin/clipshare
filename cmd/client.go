@@ -41,7 +41,7 @@ func init() {
 
 func client(username, device string) {
 	fmt.Println("user: ", username, "connecting to server...")
-	u := url.URL{Scheme: "ws", Host: "172.17.130.166:8080", Path: "/socket"}
+	u := url.URL{Scheme: "ws", Host: C.ClientConf.Host, Path: "/socket"}
 
 	// 建立websocket连接, 通过header区分客户端
 	header := http.Header{}
@@ -76,9 +76,9 @@ func send(username, device string, data []byte) {
 		Data:     data,
 	}
 	marshalForm, _ := json.Marshal(form)
-	uri := "http://172.17.130.166:8080/transfer"
+	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/transfer"}
 
-	_, err := http.Post(uri, "application/json", bytes.NewReader(marshalForm))
+	_, err := http.Post(u.String(), "application/json", bytes.NewReader(marshalForm))
 	if err != nil {
 		log.ErrorLogger.Println(err)
 	}
