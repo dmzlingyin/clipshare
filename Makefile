@@ -1,10 +1,11 @@
 # (C) 2022 Wenchao lv
 
-all: build
+server:
+	go build -tags=server -o clipshare main.go
 
-build:
-	go build -o clipshare main.go
+client:
+	go build -tags=client -o clipshare main.go
 
-install: build
+install: client
 	rm /usr/bin/clipshare
 	ln -s /home/lingyin/go/my_src/clipshare/clipshare /usr/bin/clipshare

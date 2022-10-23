@@ -1,3 +1,6 @@
+//go:build server
+// +build server
+
 package cmd
 
 import (
@@ -10,16 +13,16 @@ import (
 )
 
 // serveCmd represents the serve command
-var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "serve command uses in server that transmit received message to other devices",
+var serverCmd = &cobra.Command{
+	Use:   "server",
+	Short: "server command uses in server that transmit received message to other devices",
 	Run: func(cmd *cobra.Command, args []string) {
-		serve()
+		server()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(serverCmd)
 
 	// Here you will define your flags and configuration settings.
 
@@ -32,7 +35,7 @@ func init() {
 	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func serve() {
+func server() {
 	router := routers.InitRouter()
 	s := &http.Server{
 		Addr:           ":8080",
