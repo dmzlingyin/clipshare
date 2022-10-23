@@ -1,12 +1,9 @@
-# 改用户是否注册
-isRegister: false
-
 # 用户名和密码
 username: lingyin
 password: test
 
-# 设备名称(必须唯一)
-device: arch-linux
+# 设备名称(同一用户下必须唯一)
+device: arch
 
 # 服务器地址
 host: localhost:8080

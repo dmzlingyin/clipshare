@@ -1,2 +1,4 @@
-maxUsers: 100
-maxDevices: 10
+# 服务器允许的最大连接用户数
+max_users: 100
+# 服务器允许的同一用户下的最大连接设备数
+max_devices: 10
