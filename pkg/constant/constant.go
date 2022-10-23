@@ -9,17 +9,16 @@ import (
 
 // 客户端配置
 type CConf struct {
-	IsRegister bool
-	UserName   string
-	PassWord   string
-	Device     string
-	Host       string
+	UserName string `yaml:"username"`
+	PassWord string `yaml:"password"`
+	Device   string `yaml:"device"`
+	Host     string `yaml:"host"`
 }
 
 // 服务端配置
 type SConf struct {
-	MaxUsers   int
-	MaxDevices int
+	MaxUsers   int `yaml:"max_users"`
+	MaxDevices int `yaml:"max_devices"`
 }
 
 var (
