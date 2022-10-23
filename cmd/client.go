@@ -26,7 +26,6 @@ var clientCmd = &cobra.Command{
 	Use:   "client",
 	Short: "client can detect clipboard change and send the content to server",
 	Run: func(cmd *cobra.Command, args []string) {
-		// 将命令行传递的第一个参数作为用户名, 第二个参数作为device
 		client(C.ClientConf.UserName, C.ClientConf.Device)
 	},
 }
