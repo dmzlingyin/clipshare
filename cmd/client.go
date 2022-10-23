@@ -65,6 +65,7 @@ func client(username, device string) {
 		}
 		if len(message) > 0 {
 			fmt.Println(username, device, string(message))
+			clipboard.Write(clipboard.FmtText, message)
 		}
 	}
 }
@@ -89,6 +90,7 @@ func Watch(username, device string) {
 	for data := range ch {
 		if len(data) != 0 {
 			send(username, device, data)
+			fmt.Println(string(data))
 		}
 	}
 }
