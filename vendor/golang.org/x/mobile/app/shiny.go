@@ -38,23 +38,10 @@ func main(f func(a App)) {
 			}
 		}()
 
-		donec := make(chan struct{})
-		go func() {
-			// close the donec channel in a defer statement
-			// so that we could still be able to return even
-			// if f panics.
-			defer close(donec)
-
-			f(theApp)
-		}()
+		go f(theApp)
 
 		for {
-			select {
-			case <-donec:
-				return
-			default:
-				theApp.Send(convertEvent(w.NextEvent()))
-			}
+			theApp.Send(convertEvent(w.NextEvent()))
 		}
 	})
 }
