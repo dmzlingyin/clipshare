@@ -16,12 +16,25 @@
 
 ## 运行
 
+### 服务端
+
 ```shell
 1. git clone https://github.com/dmzlingyin/clipshare.git
 2. cd clipshare
-3. make
-4. ./clipshare
+3. make server
+4. ./clipshare server
 ```
+
+### 客户端
+
+```shell
+1. git clone https://github.com/dmzlingyin/clipshare.git
+2. cd clipshare
+3. make client
+4. ./clipshare client
+```
+
+### **根据用户名、密码等个人配置，更新conf/server.yaml和conf/client.yaml**
 
 ## ToDo
 
