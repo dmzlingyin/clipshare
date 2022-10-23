@@ -13,6 +13,14 @@ English | [简体中文](README_zh.md)
 2. data share between more one devices
 3. multiusers
 
+## How To Run
+
+```shell
+1. git clone https://github.com/dmzlingyin/clipshare.git
+2. cd clipshare
+3. make
+4. ./clipshare
+```
 
 ## ToDo
 
