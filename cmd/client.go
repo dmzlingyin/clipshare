@@ -33,16 +33,23 @@ var clientCmd = &cobra.Command{
 	},
 }
 
+var ctx context.Context
+var cancel context.CancelFunc
+
 func init() {
 	rootCmd.AddCommand(clientCmd)
 	err := clipboard.Init()
 	if err != nil {
 		log.ErrorLogger.Fatalf("clipboard init failed")
 	}
+
+	// 开启剪贴板监控
+	ctx, cancel = context.WithCancel(context.Background())
+	go Watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
 }
 
 func client(username, device string) {
-	fmt.Println("user: ", username, "connecting to server...")
+	fmt.Println(username, device, "connecting to server...")
 	u := url.URL{Scheme: "ws", Host: C.ClientConf.Host, Path: "/socket"}
 
 	// 建立websocket连接, 通过header区分客户端
@@ -56,9 +63,6 @@ func client(username, device string) {
 	}
 	defer c.Close()
 
-	// 监控剪贴板
-	go Watch(username, device)
-
 	for {
 		_, message, err := c.ReadMessage()
 		if err != nil {
@@ -66,8 +70,13 @@ func client(username, device string) {
 			return
 		}
 		if len(message) > 0 {
-			fmt.Println(username, device, string(message))
+			// 关闭剪贴板监控
+			cancel()
+			fmt.Println(username, device, "recevied: ", string(message))
 			clipboard.Write(clipboard.FmtText, message)
+			// 重新开启剪贴板监控
+			ctx, cancel = context.WithCancel(context.Background())
+			go Watch(ctx, username, device)
 		}
 	}
 }
@@ -87,12 +96,11 @@ func send(username, device string, data []byte) {
 	}
 }
 
-func Watch(username, device string) {
-	ch := clipboard.Watch(context.TODO(), clipboard.FmtText)
+func Watch(ctx context.Context, username, device string) {
+	ch := clipboard.Watch(ctx, clipboard.FmtText)
 	for data := range ch {
 		if len(data) != 0 {
 			send(username, device, data)
-			fmt.Println(string(data))
 		}
 	}
 }
