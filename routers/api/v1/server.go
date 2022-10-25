@@ -84,8 +84,8 @@ func Socket(c *gin.Context) {
 	for range ticker.C {
 		err := ws.WriteMessage(websocket.TextMessage, []byte{})
 		if err != nil {
-			log.ErrorLogger.Println("device offline")
-			fmt.Println("client offline")
+			log.ErrorLogger.Println(username, device, "offline")
+			fmt.Println(username, device, "offline")
 			return
 		}
 	}
