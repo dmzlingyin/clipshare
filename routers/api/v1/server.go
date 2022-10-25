@@ -96,7 +96,7 @@ func Transfer(c *gin.Context) {
 	userInfo := Meta{}
 	c.Bind(&userInfo)
 
-	log.InfoLogger.Println(userInfo.UserName, userInfo.Device, "sended: ", userInfo.Data)
+	log.InfoLogger.Println(userInfo.UserName, userInfo.Device, "sended: ", string(userInfo.Data))
 	// 向发送方其他在线设备进行广播
 	for i, conn := range conns[userInfo.UserName] {
 		if conn.device != userInfo.Device {
