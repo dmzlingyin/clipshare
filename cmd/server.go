@@ -4,9 +4,11 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
+	C "github.com/dmzlingyin/clipshare/pkg/constant"
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/dmzlingyin/clipshare/routers"
 	"github.com/spf13/cobra"
@@ -38,7 +40,7 @@ func init() {
 func server() {
 	router := routers.InitRouter()
 	s := &http.Server{
-		Addr:           ":8080",
+		Addr:           ":" + fmt.Sprintf("%d", C.ServerConf.Port),
 		Handler:        router,
 		ReadTimeout:    time.Minute,
 		WriteTimeout:   time.Minute,

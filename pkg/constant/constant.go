@@ -19,6 +19,7 @@ type CConf struct {
 type SConf struct {
 	MaxUsers   int `yaml:"max_users"`
 	MaxDevices int `yaml:"max_devices"`
+	Port       int `yaml:"port"`
 }
 
 var (
