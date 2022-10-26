@@ -5,15 +5,15 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"time"
 
+	"github.com/dmzlingyin/clipshare/vendor/golang.org/x/mobile/event/lifecycle"
 	"github.com/gorilla/websocket"
 	"golang.design/x/clipboard"
 	"golang.org/x/mobile/app"
-	"golang.org/x/mobile/event/lifecycle"
 	"golang.org/x/mobile/event/paint"
 	"golang.org/x/mobile/gl"
 )
@@ -21,6 +21,7 @@ import (
 const (
 	username = "lingyin"
 	device   = "android"
+	host     = "172.17.130.166:8080"
 )
 
 type Meta struct {
@@ -29,108 +30,99 @@ type Meta struct {
 	Data     []byte
 }
 
-var data []byte
-var count = 1
-var ch chan bool
-var ctx context.Context
-var cancel context.CancelFunc
-
-func init() {
-	err := clipboard.Init()
-	if err != nil {
-		panic(err)
-	}
-
-	ctx, cancel = context.WithCancel(context.TODO())
-	go Watch(ctx, username, device)
+type ClipApp struct {
+	app    app.App
+	ctx    gl.Context
+	header http.Header
 }
 
-func main() {
-	go connect()
-
-	app.Main(func(a app.App) {
-		var glctx gl.Context
-		for {
-			select {
-			case <-ch:
-				a.Send(paint.Event{})
-
-			case e := <-a.Events():
-				switch e := a.Filter(e).(type) {
-				case lifecycle.Event:
-					glctx, _ = e.DrawContext.(gl.Context)
-				case paint.Event:
-					if glctx == nil {
-						continue
-					}
-					draw(glctx)
-					a.Publish()
-				}
-			}
-		}
-	})
-}
-
-func draw(glctx gl.Context) {
-	if count%2 == 0 {
-		glctx.ClearColor(0, 1, 0, 1)
-	} else {
-		glctx.ClearColor(0, 1, 1, 1)
-	}
-	count++
-	glctx.Clear(gl.COLOR_BUFFER_BIT)
-}
-
-func connect() {
-	u := url.URL{Scheme: "ws", Host: "172.17.130.166:8080", Path: "/socket"}
-
-	// 建立websocket连接, 通过header区分客户端
+func NewClipApp(a app.App) *ClipApp {
 	header := http.Header{}
-	header.Add("UserName", username)
-	header.Add("Device", device)
-	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
-	if err != nil {
-		return
-	}
-	defer c.Close()
+	header.Add("username", username)
+	header.Add("device", device)
+	return &ClipApp{app: a, header: header}
+}
 
-	for {
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			return
+func (c *ClipApp) Watch(format clipboard.Format) {
+	t := time.NewTicker(time.Second)
+	last := clipboard.Read(format)
+	for range t.C {
+		data := clipboard.Read(format)
+		if len(data) == 0 {
+			continue
 		}
-		if len(message) > 0 {
-			// 关闭剪贴板监控
-			cancel()
-			ch <- true
-			clipboard.Write(clipboard.FmtText, message)
-			// 重新开启剪贴板监控
-			ctx, cancel = context.WithCancel(context.Background())
-			go Watch(ctx, username, device)
+		if !bytes.Equal(last, data) {
+			c.Send(data)
+			last = data
 		}
 	}
 }
 
-func send(username, device string, data []byte) {
+func (c *ClipApp) Send(data []byte) {
 	form := Meta{
 		UserName: username,
 		Device:   device,
 		Data:     data,
 	}
 	marshalForm, _ := json.Marshal(form)
-	u := url.URL{Scheme: "http", Host: "172.17.130.166:8080", Path: "/transfer"}
 
+	u := url.URL{Scheme: "http", Host: host, Path: "/transfer"}
 	_, err := http.Post(u.String(), "application/json", bytes.NewReader(marshalForm))
 	if err != nil {
 		return
 	}
 }
 
-func Watch(ctx context.Context, username, device string) {
-	ch := clipboard.Watch(ctx, clipboard.FmtText)
-	for data := range ch {
-		if len(data) != 0 {
-			send(username, device, data)
+func (c *ClipApp) Connect() {
+	u := url.URL{Scheme: "ws", Host: host, Path: "/socket"}
+
+	// 建立websocket连接, 通过header区分客户端
+	ws, _, err := (&websocket.Dialer{}).Dial(u.String(), c.header)
+	if err != nil {
+		return
+	}
+	defer ws.Close()
+
+	for {
+		_, message, err := ws.ReadMessage()
+		if err != nil {
+			return
+		}
+		if len(message) > 0 {
+			clipboard.Write(clipboard.FmtText, message)
 		}
 	}
+}
+
+func (c *ClipApp) draw() {
+	c.ctx.ClearColor(0, 1, 0, 1)
+	c.ctx.Clear(gl.COLOR_BUFFER_BIT)
+}
+
+func init() {
+	err := clipboard.Init()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func main() {
+	app.Main(func(a app.App) {
+		clip := NewClipApp(a)
+		clip.app.Send(paint.Event{})
+		clip.Connect()
+		clip.Watch(clipboard.FmtText)
+
+		for e := range clip.app.Events() {
+			switch e := clip.app.Filter(e).(type) {
+			case paint.Event:
+				clip.draw()
+			case lifecycle.Event:
+				switch e.Crosses(lifecycle.StageVisible) {
+				case lifecycle.CrossOn:
+					clip.Watch(clipboard.FmtImage)
+				}
+			}
+		}
+	})
 }
