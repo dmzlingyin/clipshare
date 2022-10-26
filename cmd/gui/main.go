@@ -1,5 +1,5 @@
-//go:build android
-// +build android
+//go:build darwin || linux || windows
+// +build darwin linux windows
 
 package main
 
@@ -9,19 +9,19 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.design/x/clipboard"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/lifecycle"
 	"golang.org/x/mobile/event/paint"
+	"golang.org/x/mobile/event/touch"
 	"golang.org/x/mobile/gl"
 )
 
-const (
-	username = "lingyin"
-	device   = "android"
-)
+var ctx context.Context
+var cancel context.CancelFunc
 
 type Meta struct {
 	UserName string
@@ -29,41 +29,61 @@ type Meta struct {
 	Data     []byte
 }
 
-var data []byte
-var count = 1
-var ch chan bool
-var ctx context.Context
-var cancel context.CancelFunc
+const (
+	username = "lingyin"
+	device   = "android"
+	host     = "172.17.130.166:8080"
+)
 
 func init() {
 	err := clipboard.Init()
 	if err != nil {
-		panic(err)
+		return
 	}
-
-	ctx, cancel = context.WithCancel(context.TODO())
-	go Watch(ctx, username, device)
 }
 
 func main() {
 	go connect()
-
+	Watch(ctx, username, device)
 	app.Main(func(a app.App) {
 		var glctx gl.Context
 		for {
 			select {
-			case <-ch:
-				a.Send(paint.Event{})
-
 			case e := <-a.Events():
 				switch e := a.Filter(e).(type) {
 				case lifecycle.Event:
+					switch e.Crosses(lifecycle.StageAlive) {
+					case lifecycle.CrossOff:
+						send("android", "lifecycle stageAlive", []byte("crossOff"))
+					case lifecycle.CrossOn:
+						send("android", "lifecycle stageAlive", []byte("crossOn"))
+					}
+					switch e.Crosses(lifecycle.StageDead) {
+					case lifecycle.CrossOff:
+						send("android", "lifecycle stageDead", []byte("crossOff"))
+					case lifecycle.CrossOn:
+						send("android", "lifecycle stageDead", []byte("crossOn"))
+					}
+					switch e.Crosses(lifecycle.StageVisible) {
+					case lifecycle.CrossOff:
+						send("android", "lifecycle stageVisible", []byte("crossOff"))
+					case lifecycle.CrossOn:
+						send("android", "lifecycle stageVisible", []byte("crossOn"))
+					}
+					switch e.Crosses(lifecycle.StageFocused) {
+					case lifecycle.CrossOff:
+						send("android", "lifecycle stageFocused", []byte("crossOff"))
+					case lifecycle.CrossOn:
+						send("android", "lifecycle stageFocused", []byte("crossOn"))
+					}
 					glctx, _ = e.DrawContext.(gl.Context)
+				case touch.Event:
+					send("android", "touch enent", []byte("touched"))
 				case paint.Event:
 					if glctx == nil {
 						continue
 					}
-					draw(glctx)
+					onDraw(glctx)
 					a.Publish()
 				}
 			}
@@ -71,28 +91,23 @@ func main() {
 	})
 }
 
-func draw(glctx gl.Context) {
-	if count%2 == 0 {
-		glctx.ClearColor(0, 1, 0, 1)
-	} else {
-		glctx.ClearColor(0, 1, 1, 1)
-	}
-	count++
-	glctx.Clear(gl.COLOR_BUFFER_BIT)
-}
+var (
+	determined = make(chan struct{})
+	ok         = false
+)
 
 func connect() {
-	u := url.URL{Scheme: "ws", Host: "172.17.130.166:8080", Path: "/socket"}
+	u := url.URL{Scheme: "ws", Host: host, Path: "/socket"}
 
 	// 建立websocket连接, 通过header区分客户端
 	header := http.Header{}
-	header.Add("UserName", username)
-	header.Add("Device", device)
+	header.Add("UserName", "lingyin")
+	header.Add("Device", "android")
 	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
+	defer c.Close()
 	if err != nil {
 		return
 	}
-	defer c.Close()
 
 	for {
 		_, message, err := c.ReadMessage()
@@ -100,15 +115,14 @@ func connect() {
 			return
 		}
 		if len(message) > 0 {
-			// 关闭剪贴板监控
-			cancel()
-			ch <- true
 			clipboard.Write(clipboard.FmtText, message)
-			// 重新开启剪贴板监控
-			ctx, cancel = context.WithCancel(context.Background())
-			go Watch(ctx, username, device)
 		}
 	}
+}
+
+func onDraw(glctx gl.Context) {
+	glctx.ClearColor(0, 1, 0, 1)
+	glctx.Clear(gl.COLOR_BUFFER_BIT)
 }
 
 func send(username, device string, data []byte) {
@@ -118,7 +132,7 @@ func send(username, device string, data []byte) {
 		Data:     data,
 	}
 	marshalForm, _ := json.Marshal(form)
-	u := url.URL{Scheme: "http", Host: "172.17.130.166:8080", Path: "/transfer"}
+	u := url.URL{Scheme: "http", Host: host, Path: "/transfer"}
 
 	_, err := http.Post(u.String(), "application/json", bytes.NewReader(marshalForm))
 	if err != nil {
@@ -127,10 +141,21 @@ func send(username, device string, data []byte) {
 }
 
 func Watch(ctx context.Context, username, device string) {
-	ch := clipboard.Watch(ctx, clipboard.FmtText)
-	for data := range ch {
-		if len(data) != 0 {
-			send(username, device, data)
+	ti := time.NewTicker(time.Second)
+	last := clipboard.Read(clipboard.FmtText)
+	go func() {
+		for {
+			select {
+			case <-ti.C:
+				b := clipboard.Read(clipboard.FmtText)
+				if b == nil {
+					continue
+				}
+				if !bytes.Equal(last, b) {
+					send(username, device, b)
+					last = b
+				}
+			}
 		}
-	}
+	}()
 }
