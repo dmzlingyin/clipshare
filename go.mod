@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/spf13/cobra v1.6.0
 	golang.design/x/clipboard v0.6.2
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -33,5 +34,4 @@ require (
 	golang.org/x/sys v0.0.0-20210806184541-e5e7981a1069 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
