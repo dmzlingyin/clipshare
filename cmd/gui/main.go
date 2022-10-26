@@ -5,10 +5,10 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.design/x/clipboard"
@@ -32,28 +32,25 @@ type Meta struct {
 
 type ClipApp struct {
 	app    app.App
-	ctx    gl.Context
+	gctx   gl.Context
 	header http.Header
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func NewClipApp(a app.App) *ClipApp {
 	header := http.Header{}
 	header.Add("username", username)
 	header.Add("device", device)
-	return &ClipApp{app: a, header: header}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &ClipApp{app: a, header: header, ctx: ctx, cancel: cancel}
 }
 
-func (c *ClipApp) Watch(format clipboard.Format) {
-	t := time.NewTicker(time.Second)
-	last := clipboard.Read(format)
-	for range t.C {
-		data := clipboard.Read(format)
-		if len(data) == 0 {
-			continue
-		}
-		if !bytes.Equal(last, data) {
+func (c *ClipApp) Watch() {
+	ch := clipboard.Watch(c.ctx, clipboard.FmtText)
+	for data := range ch {
+		if len(data) > 0 {
 			c.Send(data)
-			last = data
 		}
 	}
 }
@@ -75,7 +72,6 @@ func (c *ClipApp) Send(data []byte) {
 
 func (c *ClipApp) Connect() {
 	u := url.URL{Scheme: "ws", Host: host, Path: "/socket"}
-
 	// 建立websocket连接, 通过header区分客户端
 	ws, _, err := (&websocket.Dialer{}).Dial(u.String(), c.header)
 	if err != nil {
@@ -89,14 +85,31 @@ func (c *ClipApp) Connect() {
 			return
 		}
 		if len(message) > 0 {
+			c.cancel()
 			clipboard.Write(clipboard.FmtText, message)
+			c.ctx, c.cancel = context.WithCancel(context.Background())
+			go c.Watch()
 		}
 	}
 }
 
+func (c *ClipApp) OnStart(e lifecycle.Event) {
+	c.gctx, _ = e.DrawContext.(gl.Context)
+	c.app.Send(paint.Event{})
+}
+
+func (c *ClipApp) OnStop() {
+	c.gctx = nil
+}
+
 func (c *ClipApp) draw() {
-	c.ctx.ClearColor(0, 1, 0, 1)
-	c.ctx.Clear(gl.COLOR_BUFFER_BIT)
+	if c.gctx == nil {
+		return
+	}
+	defer c.app.Send(paint.Event{})
+	defer c.app.Publish()
+	c.gctx.ClearColor(0, 1, 0, 1)
+	c.gctx.Clear(gl.COLOR_BUFFER_BIT)
 }
 
 func init() {
@@ -110,18 +123,20 @@ func main() {
 	app.Main(func(a app.App) {
 		clip := NewClipApp(a)
 		clip.app.Send(paint.Event{})
-		clip.Connect()
-		clip.Watch(clipboard.FmtText)
+		go clip.Connect()
+		go clip.Watch()
 
 		for e := range clip.app.Events() {
 			switch e := clip.app.Filter(e).(type) {
-			case paint.Event:
-				clip.draw()
 			case lifecycle.Event:
 				switch e.Crosses(lifecycle.StageVisible) {
+				case lifecycle.CrossOff:
+					clip.OnStop()
 				case lifecycle.CrossOn:
-					clip.Watch(clipboard.FmtImage)
+					clip.OnStart(e)
 				}
+			case paint.Event:
+				clip.draw()
 			}
 		}
 	})
