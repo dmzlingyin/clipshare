@@ -5,7 +5,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -34,25 +33,15 @@ type ClipApp struct {
 	app    app.App
 	gctx   gl.Context
 	header http.Header
-	ctx    context.Context
-	cancel context.CancelFunc
 }
+
+var conncted = false
 
 func NewClipApp(a app.App) *ClipApp {
 	header := http.Header{}
 	header.Add("username", username)
 	header.Add("device", device)
-	ctx, cancel := context.WithCancel(context.Background())
-	return &ClipApp{app: a, header: header, ctx: ctx, cancel: cancel}
-}
-
-func (c *ClipApp) Watch() {
-	ch := clipboard.Watch(c.ctx, clipboard.FmtText)
-	for data := range ch {
-		if len(data) > 0 {
-			c.Send(data)
-		}
-	}
+	return &ClipApp{app: a, header: header}
 }
 
 func (c *ClipApp) Send(data []byte) {
@@ -78,6 +67,7 @@ func (c *ClipApp) Connect() {
 		return
 	}
 	defer ws.Close()
+	conncted = true
 
 	for {
 		_, message, err := ws.ReadMessage()
@@ -85,10 +75,7 @@ func (c *ClipApp) Connect() {
 			return
 		}
 		if len(message) > 0 {
-			c.cancel()
 			clipboard.Write(clipboard.FmtText, message)
-			c.ctx, c.cancel = context.WithCancel(context.Background())
-			go c.Watch()
 		}
 	}
 }
@@ -108,7 +95,11 @@ func (c *ClipApp) draw() {
 	}
 	defer c.app.Send(paint.Event{})
 	defer c.app.Publish()
-	c.gctx.ClearColor(0, 1, 0, 1)
+	if conncted {
+		c.gctx.ClearColor(0, 1, 0, 1)
+	} else {
+		c.gctx.ClearColor(1, 0, 0, 1)
+	}
 	c.gctx.Clear(gl.COLOR_BUFFER_BIT)
 }
 
@@ -124,7 +115,6 @@ func main() {
 		clip := NewClipApp(a)
 		clip.app.Send(paint.Event{})
 		go clip.Connect()
-		go clip.Watch()
 
 		for e := range clip.app.Events() {
 			switch e := clip.app.Filter(e).(type) {
@@ -134,6 +124,8 @@ func main() {
 					clip.OnStop()
 				case lifecycle.CrossOn:
 					clip.OnStart(e)
+					data := clipboard.Read(clipboard.FmtText)
+					clip.Send(data)
 				}
 			case paint.Event:
 				clip.draw()

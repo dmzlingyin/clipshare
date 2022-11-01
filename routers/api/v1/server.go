@@ -85,6 +85,14 @@ func Socket(c *gin.Context) {
 		err := ws.WriteMessage(websocket.TextMessage, []byte{})
 		if err != nil {
 			log.ErrorLogger.Println(username, device, "offline")
+			// 从连接队列移除
+			q := conns[username]
+			for i := 0; i < len(q); i++ {
+				if q[i].device == device {
+					q[i].ws.Close()
+					conns[username] = append(conns[username][:i], conns[username][i+1:]...)
+				}
+			}
 			return
 		}
 	}
@@ -98,13 +106,11 @@ func Transfer(c *gin.Context) {
 
 	log.InfoLogger.Println(userInfo.UserName, userInfo.Device, "sended: ", string(userInfo.Data))
 	// 向发送方其他在线设备进行广播
-	for i, conn := range conns[userInfo.UserName] {
+	for _, conn := range conns[userInfo.UserName] {
 		if conn.device != userInfo.Device {
 			err := conn.ws.WriteMessage(websocket.TextMessage, userInfo.Data)
-			if err != nil && websocket.IsCloseError(err) {
-				// 如果设备下线, 关闭其连接并从连接队列中移除
-				conn.ws.Close()
-				conns[userInfo.UserName] = append(conns[userInfo.UserName][:i], conns[userInfo.UserName][i+1:]...)
+			if err != nil {
+				log.ErrorLogger.Println("data send to", userInfo.UserName, userInfo.Data, "error")
 				continue
 			}
 		}
