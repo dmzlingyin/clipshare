@@ -72,6 +72,14 @@ github.com/ugorji/go/codec
 ## explicit; go 1.16
 golang.design/x/clipboard
 golang.design/x/clipboard/internal/cgo
+# golang.design/x/hotkey v0.3.0
+## explicit; go 1.17
+golang.design/x/hotkey
+golang.design/x/hotkey/internal/win
+golang.design/x/hotkey/mainthread
+# golang.design/x/mainthread v0.3.0
+## explicit; go 1.16
+golang.design/x/mainthread
 # golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 ## explicit; go 1.17
 golang.org/x/crypto/sha3
