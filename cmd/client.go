@@ -4,25 +4,20 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/dmzlingyin/clipshare/hub"
 	C "github.com/dmzlingyin/clipshare/pkg/constant"
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
 	"golang.design/x/clipboard"
+	"golang.design/x/hotkey"
+	"golang.design/x/hotkey/mainthread"
 )
-
-type Meta struct {
-	UserName string
-	Device   string
-	Data     []byte
-}
 
 // clientCmd represents the client command
 var clientCmd = &cobra.Command{
@@ -33,6 +28,7 @@ var clientCmd = &cobra.Command{
 	},
 }
 
+// 用于控制剪贴板监控开启或关闭
 var ctx context.Context
 var cancel context.CancelFunc
 
@@ -45,7 +41,25 @@ func init() {
 
 	// 开启剪贴板监控
 	ctx, cancel = context.WithCancel(context.Background())
-	go Watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
+	go watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
+	// 注册热键
+	go mainthread.Init(fn)
+}
+
+func fn() {
+	// Ctrl + Shift + S
+	hk := hotkey.New([]hotkey.Modifier{hotkey.ModCtrl, hotkey.ModShift}, hotkey.KeyS)
+	err := hk.Register()
+	if err != nil {
+		log.ErrorLogger.Println("热键注册失败")
+		log.ErrorLogger.Println(err)
+	}
+
+	for {
+		<-hk.Keydown()
+		// 文件分享
+		fmt.Println("hotkey down")
+	}
 }
 
 func client(username, device string) {
@@ -76,31 +90,16 @@ func client(username, device string) {
 			clipboard.Write(clipboard.FmtText, message)
 			// 重新开启剪贴板监控
 			ctx, cancel = context.WithCancel(context.Background())
-			go Watch(ctx, username, device)
+			go watch(ctx, username, device)
 		}
 	}
 }
 
-func send(username, device string, data []byte) {
-	form := Meta{
-		UserName: username,
-		Device:   device,
-		Data:     data,
-	}
-	marshalForm, _ := json.Marshal(form)
-	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/transfer"}
-
-	_, err := http.Post(u.String(), "application/json", bytes.NewReader(marshalForm))
-	if err != nil {
-		log.ErrorLogger.Println(err)
-	}
-}
-
-func Watch(ctx context.Context, username, device string) {
+func watch(ctx context.Context, username, device string) {
 	ch := clipboard.Watch(ctx, clipboard.FmtText)
 	for data := range ch {
 		if len(data) != 0 {
-			send(username, device, data)
+			hub.Send(username, device, data)
 		}
 	}
 }
