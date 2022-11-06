@@ -14,7 +14,7 @@ var (
 func init() {
 	file, err := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Fatalf("log.txt open error: %s\n", err)
+		log.Fatal("log.txt open fail.")
 	}
 
 	InfoLogger = log.New(file, "info: ", log.Ldate|log.Ltime|log.Lshortfile)

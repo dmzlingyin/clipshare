@@ -24,7 +24,7 @@ var clientCmd = &cobra.Command{
 	Use:   "client",
 	Short: "client can detect clipboard change and send the content to server",
 	Run: func(cmd *cobra.Command, args []string) {
-		client(C.ClientConf.UserName, C.ClientConf.Device)
+		client()
 	},
 }
 
@@ -62,14 +62,14 @@ func fn() {
 	}
 }
 
-func client(username, device string) {
-	fmt.Println(username, device, "connecting to server...")
+func client() {
 	u := url.URL{Scheme: "ws", Host: C.ClientConf.Host, Path: "/socket"}
 
 	// 建立websocket连接, 通过header区分客户端
 	header := http.Header{}
-	header.Add("UserName", username)
-	header.Add("Device", device)
+	header.Add("UserName", C.ClientConf.UserName)
+	header.Add("Password", C.ClientConf.PassWord)
+	header.Add("Device", C.ClientConf.Device)
 	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
 	if err != nil {
 		log.ErrorLogger.Println(err)
@@ -86,11 +86,10 @@ func client(username, device string) {
 		if len(message) > 0 {
 			// 关闭剪贴板监控
 			cancel()
-			fmt.Println(username, device, "recevied: ", string(message))
 			clipboard.Write(clipboard.FmtText, message)
 			// 重新开启剪贴板监控
 			ctx, cancel = context.WithCancel(context.Background())
-			go watch(ctx, username, device)
+			go watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
 		}
 	}
 }

@@ -19,7 +19,8 @@ limitations under the License.
 package routers
 
 import (
-	"github.com/dmzlingyin/clipshare/pkg/middle"
+	"github.com/dmzlingyin/clipshare/middleware/jwt"
+	"github.com/dmzlingyin/clipshare/routers/api"
 	v1 "github.com/dmzlingyin/clipshare/routers/api/v1"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -30,9 +31,14 @@ func InitRouter() *gin.Engine {
 	r.Use(gin.Recovery())
 	// 允许跨域请求
 	r.Use(cors.Default())
-	r.Use(middle.Auth())
 
-	r.GET("/socket", v1.Socket)
-	r.POST("/transfer", v1.Transfer)
+	r.POST("/login", api.GetAuth)
+	apiv1 := r.Group("/api/v1")
+
+	apiv1.Use(jwt.JWT())
+	{
+		r.GET("/socket", v1.Socket)
+		r.POST("/transfer", v1.Transfer)
+	}
 	return r
 }

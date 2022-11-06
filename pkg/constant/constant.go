@@ -12,6 +12,7 @@ type CConf struct {
 	UserName string `yaml:"username"`
 	PassWord string `yaml:"password"`
 	Device   string `yaml:"device"`
+	Token    string `yaml:"token"`
 	Host     string `yaml:"host"`
 }
 

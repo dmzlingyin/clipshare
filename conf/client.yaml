@@ -1,9 +1,11 @@
 # 用户名和密码
 username: lingyin
-password: test
+password: est
+token: 
 
 # 设备名称(同一用户下必须唯一)
 device: arch-linux
 
 # 服务器地址
-host: lab-server:8080
+#host: lab-server:8080
+host: 127.0.0.1:8080
