@@ -33,12 +33,14 @@ func InitRouter() *gin.Engine {
 	r.Use(cors.Default())
 
 	r.POST("/login", api.GetAuth)
+	r.POST("/register", api.Register)
 	apiv1 := r.Group("/api/v1")
 
 	apiv1.Use(jwt.JWT())
 	{
 		r.GET("/socket", v1.Socket)
 		r.POST("/transfer", v1.Transfer)
+		r.GET("/auth", api.Auth)
 	}
 	return r
 }

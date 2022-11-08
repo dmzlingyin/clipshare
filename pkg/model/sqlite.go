@@ -63,7 +63,7 @@ func Check(username, password string) error {
 	return nil
 }
 
-func register(username, password string) error {
+func Register(username, password string) error {
 	if id := userID(username); id != -1 {
 		return errors.New("user already exist")
 	}

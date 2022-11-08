@@ -21,9 +21,8 @@ import (
 
 // use username and device as part of JWT PAYLOAD
 type auth struct {
-	Username string `valid:"Required; MaxSize(260)"`
-	Device   string `valid:"Required; MaxSize(260)"`
-	Password string `valid:"Required; MaxSize(260)"`
+	uinfo
+	Device string `valid:"Required; MaxSize(260)"`
 }
 
 func GetAuth(c *gin.Context) {
@@ -31,7 +30,7 @@ func GetAuth(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 	device := c.PostForm("device")
-	a := auth{username, password, device}
+	a := auth{uinfo{username, password}, device}
 
 	valid := validation.Validation{} // 实例化验证对象
 	ok, _ := valid.Valid(&a)         // 验证参数是否符合约定

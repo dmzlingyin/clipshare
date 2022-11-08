@@ -5,12 +5,16 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/dmzlingyin/clipshare/hub"
 	C "github.com/dmzlingyin/clipshare/pkg/constant"
+	"github.com/dmzlingyin/clipshare/pkg/e"
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
@@ -18,6 +22,12 @@ import (
 	"golang.design/x/hotkey"
 	"golang.design/x/hotkey/mainthread"
 )
+
+type rv struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
 
 // clientCmd represents the client command
 var clientCmd = &cobra.Command{
@@ -39,6 +49,8 @@ func init() {
 		log.ErrorLogger.Fatalf("clipboard init failed")
 	}
 
+	// 登录验证
+	login()
 	// 开启剪贴板监控
 	ctx, cancel = context.WithCancel(context.Background())
 	go watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
@@ -99,6 +111,75 @@ func watch(ctx context.Context, username, device string) {
 	for data := range ch {
 		if len(data) != 0 {
 			hub.Send(username, device, data)
+		}
+	}
+}
+
+func login() {
+	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/login"}
+	v := url.Values{}
+
+	if C.ClientConf.Token == "" {
+		v.Set("username", C.ClientConf.UserName)
+		v.Set("password", C.ClientConf.PassWord)
+		v.Set("device", C.ClientConf.Device)
+		resp, err := http.PostForm(u.String(), v)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.ErrorLogger.Fatal(err)
+		}
+
+		rvalue := rv{}
+		err = json.Unmarshal(body, &rvalue)
+		if err != nil {
+			log.ErrorLogger.Fatal(err)
+		}
+		if rvalue.Code == e.ERROR_USER_PASSWORD {
+			// 自动注册
+			u.Path = "/register"
+			resp, err = http.PostForm(u.String(), v)
+			if err != nil {
+				panic(err)
+			}
+			defer resp.Body.Close()
+
+			body, err = io.ReadAll(resp.Body)
+			err = json.Unmarshal(body, &rvalue)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		// 获取的token写入文件
+		fmt.Println("请重新执行程序")
+		os.Exit(0)
+	} else {
+		u.Path = "/api/v1/auth"
+		client := &http.Client{}
+		req, _ := http.NewRequest("GET", u.String(), nil)
+		req.Header.Add("Token", C.ClientConf.Token)
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(body, &rvalue)
+
+		if rvalue.Code != http.StatusOK {
+			log.ErrorLogger.Println("token invalid")
+			// 如果token不合法, 重新获取token
+			C.ClientConf.Token = ""
+			login()
 		}
 	}
 }
