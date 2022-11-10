@@ -53,7 +53,7 @@ func init() {
 	login()
 	// 开启剪贴板监控
 	ctx, cancel = context.WithCancel(context.Background())
-	go watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
+	go watch(ctx, C.Token)
 	// 注册热键
 	go mainthread.Init(fn)
 }
@@ -75,13 +75,11 @@ func fn() {
 }
 
 func client() {
-	u := url.URL{Scheme: "ws", Host: C.ClientConf.Host, Path: "/socket"}
+	u := url.URL{Scheme: "ws", Host: C.ClientConf.Host, Path: "/api/v1/socket"}
 
-	// 建立websocket连接, 通过header区分客户端
+	// 建立websocket连接, 通过header中的token区分用户和客户端
 	header := http.Header{}
-	header.Add("UserName", C.ClientConf.UserName)
-	header.Add("Password", C.ClientConf.PassWord)
-	header.Add("Device", C.ClientConf.Device)
+	header.Add("Token", C.Token)
 	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
 	if err != nil {
 		log.ErrorLogger.Println(err)
@@ -101,16 +99,16 @@ func client() {
 			clipboard.Write(clipboard.FmtText, message)
 			// 重新开启剪贴板监控
 			ctx, cancel = context.WithCancel(context.Background())
-			go watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
+			go watch(ctx, C.Token)
 		}
 	}
 }
 
-func watch(ctx context.Context, username, device string) {
+func watch(ctx context.Context, token string) {
 	ch := clipboard.Watch(ctx, clipboard.FmtText)
 	for data := range ch {
 		if len(data) != 0 {
-			hub.Send(username, device, data)
+			hub.Send(token, data)
 		}
 	}
 }
@@ -118,8 +116,10 @@ func watch(ctx context.Context, username, device string) {
 func login() {
 	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/login"}
 	v := url.Values{}
+	rvalue := rv{}
 
-	if C.ClientConf.Token == "" {
+	if C.Token == "" {
+		fmt.Println(len(C.Token))
 		v.Set("username", C.ClientConf.UserName)
 		v.Set("password", C.ClientConf.PassWord)
 		v.Set("device", C.ClientConf.Device)
@@ -134,7 +134,6 @@ func login() {
 			log.ErrorLogger.Fatal(err)
 		}
 
-		rvalue := rv{}
 		err = json.Unmarshal(body, &rvalue)
 		if err != nil {
 			log.ErrorLogger.Fatal(err)
@@ -149,20 +148,27 @@ func login() {
 			defer resp.Body.Close()
 
 			body, err = io.ReadAll(resp.Body)
+			if err != nil {
+				panic(err)
+			}
 			err = json.Unmarshal(body, &rvalue)
 			if err != nil {
 				panic(err)
 			}
 		}
 
-		// 获取的token写入文件
-		fmt.Println("请重新执行程序")
-		os.Exit(0)
+		token := (rvalue.Data).(string)
+		// 更新token, 并重新登录
+		err = C.UpdateToken(token)
+		if err != nil {
+			return
+		}
+		os.Exit(1)
 	} else {
 		u.Path = "/api/v1/auth"
 		client := &http.Client{}
 		req, _ := http.NewRequest("GET", u.String(), nil)
-		req.Header.Add("Token", C.ClientConf.Token)
+		req.Header.Add("Token", C.Token)
 		resp, err := client.Do(req)
 		if err != nil {
 			panic(err)
@@ -174,11 +180,12 @@ func login() {
 			panic(err)
 		}
 		err = json.Unmarshal(body, &rvalue)
-
-		if rvalue.Code != http.StatusOK {
+		if err != nil {
+			panic(err)
+		}
+		if rvalue.Code != 0 {
 			log.ErrorLogger.Println("token invalid")
-			// 如果token不合法, 重新获取token
-			C.ClientConf.Token = ""
+			C.Token = ""
 			login()
 		}
 	}

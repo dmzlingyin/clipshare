@@ -1,11 +1,3 @@
-/*
-* Get Token if the username is exist
-* Author: Wenchao Lv
-* Date: 2021-07-12
-* Last modified: Wenchao Lv
-* Last modified date: 2021-08-12, 2021-12-02
-* Last modified content: migrate to RPA project
- */
 package api
 
 import (
@@ -19,18 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// use username and device as part of JWT PAYLOAD
-type auth struct {
-	uinfo
-	Device string `valid:"Required; MaxSize(260)"`
-}
-
 func GetAuth(c *gin.Context) {
 	appG := app.Gin{C: c}
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 	device := c.PostForm("device")
-	a := auth{uinfo{username, password}, device}
+	a := uinfo{username, password, device}
 
 	valid := validation.Validation{} // 实例化验证对象
 	ok, _ := valid.Valid(&a)         // 验证参数是否符合约定
@@ -51,9 +37,7 @@ func GetAuth(c *gin.Context) {
 		return
 	}
 
-	appG.Response(http.StatusOK, e.SUCCESS, map[string]string{
-		"token": token,
-	})
+	appG.Response(http.StatusOK, e.SUCCESS, token)
 }
 
 func Auth(c *gin.Context) {

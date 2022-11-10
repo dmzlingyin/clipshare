@@ -20,10 +20,13 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/dmzlingyin/clipshare/pkg/app"
 	C "github.com/dmzlingyin/clipshare/pkg/constant"
+	"github.com/dmzlingyin/clipshare/pkg/e"
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -39,8 +42,7 @@ type UD struct {
 	Device   string `form:"device"`
 }
 
-type Meta struct {
-	UD
+type meta struct {
 	Data []byte
 }
 
@@ -56,9 +58,7 @@ var (
 
 // Socket 与客户端建立连接
 func Socket(c *gin.Context) {
-	var ud UD
-	c.Bind(&ud)
-
+	ud := UD{c.Keys["username"].(string), c.Keys["device"].(string)}
 	// 超过服务器的最大允许用户数量
 	if len(conns) > C.ServerConf.MaxUsers {
 		log.WarningLogger.Printf("user %s's connecting was refused\n", ud.UserName)
@@ -108,19 +108,32 @@ func Socket(c *gin.Context) {
 
 // Transfer接口获取传入数据, 并进行广播
 func Transfer(c *gin.Context) {
+	appG := app.Gin{C: c}
 	// 读取发送用户、device、数据信息
-	var userInfo Meta
-	c.Bind(&userInfo)
+	var cdata meta
+	c.Bind(&cdata)
+	fmt.Println(c)
+	username, ok := c.Keys["username"].(string)
+	if !ok {
+		appG.Response(http.StatusOK, e.ERROR_AUTH_CHECK_TOKEN_FAIL, nil)
+		return
+	}
+	device, ok := c.Keys["device"].(string)
+	if !ok {
+		appG.Response(http.StatusOK, e.ERROR_AUTH_CHECK_TOKEN_FAIL, nil)
+		return
+	}
 
-	log.InfoLogger.Println(userInfo.UserName, userInfo.Device, "sended: ", string(userInfo.Data))
+	log.InfoLogger.Println(username, device, "sended: ", string(cdata.Data))
 	// 向发送方其他在线设备进行广播
-	for _, conn := range conns[userInfo.UserName] {
-		if conn.device != userInfo.Device {
-			err := conn.ws.WriteMessage(websocket.TextMessage, userInfo.Data)
+	for _, conn := range conns[username] {
+		if conn.device != device {
+			err := conn.ws.WriteMessage(websocket.TextMessage, cdata.Data)
 			if err != nil {
-				log.ErrorLogger.Println("data send to", userInfo.UserName, userInfo.Data, "error")
+				log.ErrorLogger.Println("data send to", username, cdata.Data, "error")
 				continue
 			}
 		}
 	}
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }

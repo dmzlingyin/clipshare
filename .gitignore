@@ -3,3 +3,4 @@ clipshare.exe
 log.txt
 *.apk
 *.db
+.token

@@ -29,8 +29,12 @@ import (
 func InitRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(gin.Logger())
 	// 允许跨域请求
-	r.Use(cors.Default())
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins: true,
+		AllowHeaders:    []string{"Token"},
+	}))
 
 	r.POST("/login", api.GetAuth)
 	r.POST("/register", api.Register)
@@ -38,9 +42,9 @@ func InitRouter() *gin.Engine {
 
 	apiv1.Use(jwt.JWT())
 	{
-		r.GET("/socket", v1.Socket)
-		r.POST("/transfer", v1.Transfer)
-		r.GET("/auth", api.Auth)
+		apiv1.GET("/socket", v1.Socket)
+		apiv1.POST("/transfer", v1.Transfer)
+		apiv1.GET("/auth", api.Auth)
 	}
 	return r
 }
