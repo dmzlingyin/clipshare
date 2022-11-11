@@ -1,6 +1,7 @@
 package constant
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/dmzlingyin/clipshare/pkg/log"
@@ -25,26 +26,41 @@ type SConf struct {
 var (
 	ClientConf = CConf{}
 	ServerConf = SConf{}
+	Token      = ""
 )
 
 func init() {
-	data, err := os.ReadFile("./conf/client.yaml")
-	if err != nil {
-		log.ErrorLogger.Fatalln("client.yaml open fail")
-	}
-
-	err = yaml.Unmarshal(data, &ClientConf)
+	data := readFile("./conf/client.yaml")
+	err := yaml.Unmarshal(data, &ClientConf)
 	if err != nil {
 		log.ErrorLogger.Fatalln(err)
 	}
 
-	data, err = os.ReadFile("./conf/server.yaml")
-	if err != nil {
-		log.ErrorLogger.Fatalln("server.yaml open fail")
-	}
-
+	data = readFile("./conf/server.yaml")
 	err = yaml.Unmarshal(data, &ServerConf)
 	if err != nil {
 		log.ErrorLogger.Fatalln(err)
 	}
+
+	data = readFile("./conf/.token")
+	Token = string(data)
+	fmt.Println(Token)
+}
+
+func readFile(path string) []byte {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.ErrorLogger.Println(path, "open fail")
+		panic(err)
+	}
+	return data
+}
+
+func UpdateToken(token string) error {
+	err := os.WriteFile("./conf/.token", []byte(token), 0666)
+	if err != nil {
+		log.ErrorLogger.Println("write token to file fail")
+		return err
+	}
+	return nil
 }

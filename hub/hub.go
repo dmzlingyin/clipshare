@@ -6,6 +6,7 @@ package hub
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -13,23 +14,47 @@ import (
 	"github.com/dmzlingyin/clipshare/pkg/log"
 )
 
-type Meta struct {
-	UserName string
-	Device   string
-	Data     []byte
+type CData struct {
+	Data []byte
 }
 
-func Send(username, device string, data []byte) {
-	form := Meta{
-		UserName: username,
-		Device:   device,
-		Data:     data,
-	}
-	marshalForm, _ := json.Marshal(form)
-	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/transfer"}
+type rv struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
 
-	_, err := http.Post(u.String(), "application/json", bytes.NewReader(marshalForm))
+func Send(token string, data []byte) {
+	cdata := CData{data}
+	mdata, err := json.Marshal(cdata)
 	if err != nil {
 		log.ErrorLogger.Println(err)
+		return
+	}
+
+	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/api/v1/transfer"}
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", u.String(), bytes.NewReader(mdata))
+	if err != nil {
+		log.ErrorLogger.Println(err)
+		return
+	}
+	req.Header.Add("Token", token)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.ErrorLogger.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	var rvalue rv
+	err = json.Unmarshal(body, &rvalue)
+	if err != nil {
+		log.ErrorLogger.Println(err)
+		return
+	}
+	if rvalue.Code != 0 {
+		log.ErrorLogger.Println(rvalue.Msg)
 	}
 }

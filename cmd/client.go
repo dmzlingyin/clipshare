@@ -5,12 +5,16 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/dmzlingyin/clipshare/hub"
 	C "github.com/dmzlingyin/clipshare/pkg/constant"
+	"github.com/dmzlingyin/clipshare/pkg/e"
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
@@ -19,12 +23,18 @@ import (
 	"golang.design/x/hotkey/mainthread"
 )
 
+type rv struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
 // clientCmd represents the client command
 var clientCmd = &cobra.Command{
 	Use:   "client",
 	Short: "client can detect clipboard change and send the content to server",
 	Run: func(cmd *cobra.Command, args []string) {
-		client(C.ClientConf.UserName, C.ClientConf.Device)
+		client()
 	},
 }
 
@@ -39,9 +49,11 @@ func init() {
 		log.ErrorLogger.Fatalf("clipboard init failed")
 	}
 
+	// 登录验证
+	login()
 	// 开启剪贴板监控
 	ctx, cancel = context.WithCancel(context.Background())
-	go watch(ctx, C.ClientConf.UserName, C.ClientConf.Device)
+	go watch(ctx, C.Token)
 	// 注册热键
 	go mainthread.Init(fn)
 }
@@ -62,14 +74,12 @@ func fn() {
 	}
 }
 
-func client(username, device string) {
-	fmt.Println(username, device, "connecting to server...")
-	u := url.URL{Scheme: "ws", Host: C.ClientConf.Host, Path: "/socket"}
+func client() {
+	u := url.URL{Scheme: "ws", Host: C.ClientConf.Host, Path: "/api/v1/socket"}
 
-	// 建立websocket连接, 通过header区分客户端
+	// 建立websocket连接, 通过header中的token区分用户和客户端
 	header := http.Header{}
-	header.Add("UserName", username)
-	header.Add("Device", device)
+	header.Add("Token", C.Token)
 	c, _, err := (&websocket.Dialer{}).Dial(u.String(), header)
 	if err != nil {
 		log.ErrorLogger.Println(err)
@@ -86,20 +96,97 @@ func client(username, device string) {
 		if len(message) > 0 {
 			// 关闭剪贴板监控
 			cancel()
-			fmt.Println(username, device, "recevied: ", string(message))
 			clipboard.Write(clipboard.FmtText, message)
 			// 重新开启剪贴板监控
 			ctx, cancel = context.WithCancel(context.Background())
-			go watch(ctx, username, device)
+			go watch(ctx, C.Token)
 		}
 	}
 }
 
-func watch(ctx context.Context, username, device string) {
+func watch(ctx context.Context, token string) {
 	ch := clipboard.Watch(ctx, clipboard.FmtText)
 	for data := range ch {
 		if len(data) != 0 {
-			hub.Send(username, device, data)
+			hub.Send(token, data)
+		}
+	}
+}
+
+func login() {
+	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/login"}
+	v := url.Values{}
+	rvalue := rv{}
+
+	if C.Token == "" {
+		fmt.Println(len(C.Token))
+		v.Set("username", C.ClientConf.UserName)
+		v.Set("password", C.ClientConf.PassWord)
+		v.Set("device", C.ClientConf.Device)
+		resp, err := http.PostForm(u.String(), v)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.ErrorLogger.Fatal(err)
+		}
+
+		err = json.Unmarshal(body, &rvalue)
+		if err != nil {
+			log.ErrorLogger.Fatal(err)
+		}
+		if rvalue.Code == e.ERROR_USER_PASSWORD {
+			// 自动注册
+			u.Path = "/register"
+			resp, err = http.PostForm(u.String(), v)
+			if err != nil {
+				panic(err)
+			}
+			defer resp.Body.Close()
+
+			body, err = io.ReadAll(resp.Body)
+			if err != nil {
+				panic(err)
+			}
+			err = json.Unmarshal(body, &rvalue)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		token := (rvalue.Data).(string)
+		// 更新token, 并重新登录
+		err = C.UpdateToken(token)
+		if err != nil {
+			return
+		}
+		os.Exit(1)
+	} else {
+		u.Path = "/api/v1/auth"
+		client := &http.Client{}
+		req, _ := http.NewRequest("GET", u.String(), nil)
+		req.Header.Add("Token", C.Token)
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(body, &rvalue)
+		if err != nil {
+			panic(err)
+		}
+		if rvalue.Code != 0 {
+			log.ErrorLogger.Println("token invalid")
+			C.Token = ""
+			login()
 		}
 	}
 }

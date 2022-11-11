@@ -3,6 +3,9 @@
 server:
 	go build -tags=server -ldflags="-s -w" -o clipshare main.go
 
+server_debug:
+	go build -tags=server -o clipshare main.go
+
 client:
 	go build -tags=client -ldflags="-s -w" -o clipshare main.go
 

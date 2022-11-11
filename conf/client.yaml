@@ -6,4 +6,4 @@ password: test
 device: arch-linux
 
 # 服务器地址
-host: lab-server:8080
+host: localhost:8080
