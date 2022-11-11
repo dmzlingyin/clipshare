@@ -40,6 +40,7 @@ func Send(token string, data []byte) {
 		return
 	}
 	req.Header.Add("Token", token)
+	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
 		log.ErrorLogger.Println(err)
