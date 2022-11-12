@@ -20,7 +20,6 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -112,7 +111,6 @@ func Transfer(c *gin.Context) {
 	// 读取发送用户、device、数据信息
 	var cdata meta
 	c.Bind(&cdata)
-	fmt.Println(c)
 	username, ok := c.Keys["username"].(string)
 	if !ok {
 		appG.Response(http.StatusOK, e.ERROR_AUTH_CHECK_TOKEN_FAIL, nil)
