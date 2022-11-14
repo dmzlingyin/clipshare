@@ -119,7 +119,6 @@ func login() {
 	rvalue := rv{}
 
 	if C.Token == "" {
-		fmt.Println(len(C.Token))
 		v.Set("username", C.ClientConf.UserName)
 		v.Set("password", C.ClientConf.PassWord)
 		v.Set("device", C.ClientConf.Device)
@@ -158,12 +157,11 @@ func login() {
 		}
 
 		token := (rvalue.Data).(string)
-		// 更新token, 并重新登录
+		// 更新token, 写入token到文件
 		err = C.UpdateToken(token)
 		if err != nil {
-			return
+			os.Exit(1)
 		}
-		os.Exit(1)
 	} else {
 		u.Path = "/api/v1/auth"
 		client := &http.Client{}

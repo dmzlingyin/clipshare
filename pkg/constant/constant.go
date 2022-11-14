@@ -1,8 +1,8 @@
 package constant
 
 import (
-	"fmt"
 	"os"
+	"strings"
 
 	"github.com/dmzlingyin/clipshare/pkg/log"
 	"gopkg.in/yaml.v2"
@@ -49,6 +49,9 @@ func init() {
 func readFile(path string) []byte {
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if strings.Contains(path, "token") {
+			return []byte{}
+		}
 		log.ErrorLogger.Println(path, "open fail")
 		panic(err)
 	}
@@ -56,6 +59,7 @@ func readFile(path string) []byte {
 }
 
 func UpdateToken(token string) error {
+	Token = token
 	err := os.WriteFile("./conf/.token", []byte(token), 0666)
 	if err != nil {
 		log.ErrorLogger.Println("write token to file fail")
