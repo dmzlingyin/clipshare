@@ -44,7 +44,6 @@ func init() {
 
 	data = readFile("./conf/.token")
 	Token = string(data)
-	fmt.Println(Token)
 }
 
 func readFile(path string) []byte {
