@@ -1,5 +1,5 @@
 clipshare
-clipshare.exe
+*.exe
 log.txt
 *.apk
 *.db
