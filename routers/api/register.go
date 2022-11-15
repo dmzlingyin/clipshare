@@ -1,3 +1,6 @@
+//go:build server
+// +build server
+
 package api
 
 import (
