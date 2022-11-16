@@ -51,6 +51,6 @@ gomobile build -v -target=android -androidapi 19 -o clipshare.apk cmd/gui/main.g
 
 - [x] fundamental communicaion
 - [x] multi platforms
-- [ ] data backup
-- [ ] data share
-- [ ] more than one users
+- [x] more than one users
+- [ ] file backup
+- [ ] file share

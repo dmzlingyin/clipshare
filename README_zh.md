@@ -48,6 +48,6 @@ gomobile build -v -target=android -androidapi 19 -o clipshare.apk cmd/gui/main.g
 
 - [x] 基本通信
 - [x] 跨平台
-- [ ] 数据备份
-- [ ] 数据共享
-- [ ] 多用户
+- [x] 多用户
+- [ ] 文件备份
+- [ ] 文件共享
