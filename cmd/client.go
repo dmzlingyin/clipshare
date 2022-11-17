@@ -11,14 +11,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/dmzlingyin/clipshare/hub"
 	C "github.com/dmzlingyin/clipshare/pkg/constant"
 	"github.com/dmzlingyin/clipshare/pkg/e"
 	"github.com/dmzlingyin/clipshare/pkg/log"
-	"github.com/faiface/beep/speaker"
-	"github.com/faiface/beep/wav"
+	"github.com/dmzlingyin/clipshare/pkg/utils"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
 	"golang.design/x/clipboard"
@@ -100,6 +98,7 @@ func client() {
 			// 关闭剪贴板监控
 			cancel()
 			clipboard.Write(clipboard.FmtText, message)
+			utils.Play("./docs/receive.wav")
 			// 重新开启剪贴板监控
 			ctx, cancel = context.WithCancel(context.Background())
 			go watch(ctx, C.Token)
@@ -115,15 +114,8 @@ func watch(ctx context.Context, token string) {
 			if err != nil {
 				log.ErrorLogger.Println(err)
 			} else {
-				// 播放成功提示音
-				f, err := os.Open("./docs/send.wav")
-				streamer, format, err := wav.Decode(f)
-				if err != nil {
-					log.ErrorLogger.Println(err)
-				}
-				defer streamer.Close()
-				speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
-				speaker.Play(streamer)
+				// 播放发送成功提示音
+				utils.Play("./docs/send.wav")
 			}
 		}
 	}
