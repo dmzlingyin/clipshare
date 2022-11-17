@@ -98,7 +98,7 @@ func client() {
 			// 关闭剪贴板监控
 			cancel()
 			clipboard.Write(clipboard.FmtText, message)
-			utils.Play("./docs/receive.wav")
+			go utils.Play("./docs/receive.wav")
 			// 重新开启剪贴板监控
 			ctx, cancel = context.WithCancel(context.Background())
 			go watch(ctx, C.Token)
@@ -115,7 +115,7 @@ func watch(ctx context.Context, token string) {
 				log.ErrorLogger.Println(err)
 			} else {
 				// 播放发送成功提示音
-				utils.Play("./docs/send.wav")
+				go utils.Play("./docs/send.wav")
 			}
 		}
 	}
