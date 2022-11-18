@@ -14,6 +14,7 @@ type CConf struct {
 	PassWord string `yaml:"password"`
 	Device   string `yaml:"device"`
 	Host     string `yaml:"host"`
+	Mute     bool   `yaml:"mute"`
 }
 
 // 服务端配置

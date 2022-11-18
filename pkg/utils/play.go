@@ -25,8 +25,9 @@ func Play(sound string) {
 		return
 	}
 	defer streamer.Close()
-	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second))
 
+	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second))
+	// done用于音频播放完毕的同步信号, 否则未等音频播放, 程序就返回了
 	done := make(chan bool)
 	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
 		done <- true
