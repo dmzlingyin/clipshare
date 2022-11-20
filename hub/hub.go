@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,18 +15,8 @@ import (
 	C "github.com/dmzlingyin/clipshare/pkg/constant"
 )
 
-type CData struct {
-	Data []byte
-}
-
-type rv struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
-}
-
 func Send(token string, data []byte) error {
-	cdata := CData{data}
+	cdata := CD{data}
 	mdata, err := json.Marshal(cdata)
 	if err != nil {
 		return nil
@@ -46,13 +37,24 @@ func Send(token string, data []byte) error {
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
-	var rvalue rv
-	err = json.Unmarshal(body, &rvalue)
+	var rv RV
+	err = json.Unmarshal(body, &rv)
 	if err != nil {
 		return err
 	}
-	if rvalue.Code != 0 {
+	if rv.Code != 0 {
 		return errors.New("fail")
 	}
 	return nil
+}
+
+func SendFile(fp string) {
+	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/api/v1/backup"}
+	resp, err := http.PostForm(u.String(), nil)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	fmt.Println(string(body))
 }

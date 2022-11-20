@@ -6,7 +6,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -23,12 +22,6 @@ import (
 	"golang.design/x/hotkey"
 	"golang.design/x/hotkey/mainthread"
 )
-
-type rv struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
-}
 
 // clientCmd represents the client command
 var clientCmd = &cobra.Command{
@@ -71,7 +64,10 @@ func fn() {
 	for {
 		<-hk.Keydown()
 		// 文件分享
-		fmt.Println("hotkey down")
+		fp := string(clipboard.Read(clipboard.FmtText))
+		if utils.IsFile(fp) {
+			go hub.SendFile(fp)
+		}
 	}
 }
 
@@ -128,7 +124,7 @@ func watch(ctx context.Context, token string) {
 func login() {
 	u := url.URL{Scheme: "http", Host: C.ClientConf.Host, Path: "/login"}
 	v := url.Values{}
-	rvalue := rv{}
+	rv := hub.RV{}
 
 	if C.Token == "" {
 		v.Set("username", C.ClientConf.UserName)
@@ -145,11 +141,11 @@ func login() {
 			log.ErrorLogger.Fatal(err)
 		}
 
-		err = json.Unmarshal(body, &rvalue)
+		err = json.Unmarshal(body, &rv)
 		if err != nil {
 			log.ErrorLogger.Fatal(err)
 		}
-		if rvalue.Code == e.ERROR_USER_PASSWORD {
+		if rv.Code == e.ERROR_USER_PASSWORD {
 			// 自动注册
 			u.Path = "/register"
 			resp, err = http.PostForm(u.String(), v)
@@ -162,13 +158,13 @@ func login() {
 			if err != nil {
 				panic(err)
 			}
-			err = json.Unmarshal(body, &rvalue)
+			err = json.Unmarshal(body, &rv)
 			if err != nil {
 				panic(err)
 			}
 		}
 
-		token := (rvalue.Data).(string)
+		token := (rv.Data).(string)
 		// 更新token, 写入token到文件
 		err = C.UpdateToken(token)
 		if err != nil {
@@ -189,11 +185,11 @@ func login() {
 		if err != nil {
 			panic(err)
 		}
-		err = json.Unmarshal(body, &rvalue)
+		err = json.Unmarshal(body, &rv)
 		if err != nil {
 			panic(err)
 		}
-		if rvalue.Code != 0 {
+		if rv.Code != 0 {
 			log.ErrorLogger.Println("token invalid")
 			C.Token = ""
 			login()

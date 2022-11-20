@@ -20,9 +20,11 @@ limitations under the License.
 package v1
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
+	"github.com/dmzlingyin/clipshare/hub"
 	"github.com/dmzlingyin/clipshare/pkg/app"
 	C "github.com/dmzlingyin/clipshare/pkg/constant"
 	"github.com/dmzlingyin/clipshare/pkg/e"
@@ -41,10 +43,6 @@ type UD struct {
 	Device   string `form:"device"`
 }
 
-type meta struct {
-	Data []byte
-}
-
 var (
 	// 维护每个用户的连接队列
 	conns    = map[string][]conn{}
@@ -57,21 +55,10 @@ var (
 
 // Socket 与客户端建立连接
 func Socket(c *gin.Context) {
-	ud := UD{c.Keys["username"].(string), c.Keys["device"].(string)}
-	// 超过服务器的最大允许用户数量
-	if len(conns) > C.ServerConf.MaxUsers {
-		log.WarningLogger.Printf("user %s's connecting was refused\n", ud.UserName)
-		c.JSON(http.StatusForbidden, gin.H{
-			"msg": "too many users connected",
-		})
-		return
-	}
-	// 超过服务器的最大允许用户设备数量
-	if len(conns[ud.UserName]) > C.ServerConf.MaxDevices {
-		log.WarningLogger.Printf("user %s's device %s connecting was refused\n", ud.UserName, ud.Device)
-		c.JSON(http.StatusForbidden, gin.H{
-			"msg": "too many devices connected",
-		})
+	appG := app.Gin{C: c}
+	ud, err := isAllow(c)
+	if err != nil {
+		appG.Response(http.StatusOK, e.SUCCESS, err.Error())
 		return
 	}
 
@@ -105,11 +92,24 @@ func Socket(c *gin.Context) {
 	}
 }
 
+func isAllow(c *gin.Context) (UD, error) {
+	ud := UD{c.Keys["username"].(string), c.Keys["device"].(string)}
+	// 超过服务器的最大允许用户数量
+	if len(conns) >= C.ServerConf.MaxUsers {
+		return ud, errors.New("too many users connected")
+	}
+	// 超过服务器的最大允许用户设备数量
+	if len(conns[ud.UserName]) >= C.ServerConf.MaxDevices {
+		return ud, errors.New("too many devices connected")
+	}
+	return ud, nil
+}
+
 // Transfer接口获取传入数据, 并进行广播
 func Transfer(c *gin.Context) {
 	appG := app.Gin{C: c}
-	// 读取发送用户、device、数据信息
-	var cdata meta
+	// 读取客户端发送的用户、device、数据信息
+	var cdata hub.CD
 	c.Bind(&cdata)
 	username, ok := c.Keys["username"].(string)
 	if !ok {
