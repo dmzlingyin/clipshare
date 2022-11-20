@@ -126,11 +126,12 @@ func Transfer(c *gin.Context) {
 	// 向发送方其他在线设备进行广播
 	for _, conn := range conns[username] {
 		if conn.device != device {
-			err := conn.ws.WriteMessage(websocket.TextMessage, cdata.Data)
-			if err != nil {
-				log.ErrorLogger.Println("data send to", username, cdata.Data, "error")
-				continue
-			}
+			go func(conn *websocket.Conn) {
+				err := conn.ws.WriteMessage(websocket.TextMessage, cdata.Data)
+				if err != nil {
+					log.ErrorLogger.Println("data send to", username, cdata.Data, "error")
+				}
+			}(conn)
 		}
 	}
 	appG.Response(http.StatusOK, e.SUCCESS, nil)
