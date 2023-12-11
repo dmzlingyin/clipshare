@@ -8,8 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// 客户端配置
-type CConf struct {
+type Conf struct {
 	UserName string `yaml:"username"`
 	PassWord string `yaml:"password"`
 	Device   string `yaml:"device"`
@@ -17,34 +16,14 @@ type CConf struct {
 	Mute     bool   `yaml:"mute"`
 }
 
-// 服务端配置
-type SConf struct {
-	MaxUsers   int `yaml:"max_users"`
-	MaxDevices int `yaml:"max_devices"`
-	Port       int `yaml:"port"`
-}
-
-var (
-	ClientConf = CConf{}
-	ServerConf = SConf{}
-	Token      = ""
-)
+var Config Conf
 
 func init() {
 	data := readFile("./conf/client.yaml")
-	err := yaml.Unmarshal(data, &ClientConf)
+	err := yaml.Unmarshal(data, &Config)
 	if err != nil {
-		log.ErrorLogger.Fatalln(err)
+		log.Error.Fatalln(err)
 	}
-
-	data = readFile("./conf/server.yaml")
-	err = yaml.Unmarshal(data, &ServerConf)
-	if err != nil {
-		log.ErrorLogger.Fatalln(err)
-	}
-
-	data = readFile("./conf/.token")
-	Token = string(data)
 }
 
 func readFile(path string) []byte {
@@ -53,18 +32,8 @@ func readFile(path string) []byte {
 		if strings.Contains(path, "token") {
 			return []byte{}
 		}
-		log.ErrorLogger.Println(path, "open fail")
+		log.Error.Println(path, "open fail")
 		panic(err)
 	}
 	return data
-}
-
-func UpdateToken(token string) error {
-	Token = token
-	err := os.WriteFile("./conf/.token", []byte(token), 0666)
-	if err != nil {
-		log.ErrorLogger.Println("write token to file fail")
-		return err
-	}
-	return nil
 }

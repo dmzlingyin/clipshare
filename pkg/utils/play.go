@@ -1,6 +1,3 @@
-//go:build client
-// +build client
-
 package utils
 
 import (
@@ -16,12 +13,12 @@ import (
 func Play(sound string) {
 	f, err := os.Open(sound)
 	if err != nil {
-		log.ErrorLogger.Println(err)
+		log.Error.Println(err)
 		return
 	}
 	streamer, format, err := wav.Decode(f)
 	if err != nil {
-		log.ErrorLogger.Println(err)
+		log.Error.Println(err)
 		return
 	}
 	defer streamer.Close()

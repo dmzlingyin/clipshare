@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	InfoLogger    *log.Logger
-	WarningLogger *log.Logger
-	ErrorLogger   *log.Logger
+	Info  *log.Logger
+	Warn  *log.Logger
+	Error *log.Logger
 )
 
 func init() {
@@ -17,7 +17,7 @@ func init() {
 		log.Fatal("log.txt open fail.")
 	}
 
-	InfoLogger = log.New(file, "info: ", log.Ldate|log.Ltime|log.Lshortfile)
-	WarningLogger = log.New(file, "warning: ", log.Ldate|log.Ltime|log.Lshortfile)
-	ErrorLogger = log.New(file, "error: ", log.Ldate|log.Ltime|log.Lshortfile)
+	Info = log.New(file, "info: ", log.Ldate|log.Ltime|log.Lshortfile)
+	Warn = log.New(file, "warning: ", log.Ldate|log.Ltime|log.Lshortfile)
+	Error = log.New(file, "error: ", log.Ldate|log.Ltime|log.Lshortfile)
 }

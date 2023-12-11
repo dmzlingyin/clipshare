@@ -1,12 +1,6 @@
-# 用户名和密码
-username: lingyin
-password: test
-
 # 设备名称(同一用户下必须唯一)
-device: windows
-
+device: mac
 # 服务器地址
-host: 172.17.130.166:8080
-
+host: nats://server_4090:4222
 # 消息提醒
 mute: false

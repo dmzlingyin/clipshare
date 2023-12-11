@@ -16,9 +16,13 @@ limitations under the License.
 package main
 
 import (
-	"github.com/dmzlingyin/clipshare/cmd"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
-	cmd.Execute()
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
 }
